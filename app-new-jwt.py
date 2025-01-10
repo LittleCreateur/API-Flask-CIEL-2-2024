@@ -1,69 +1,33 @@
+from flask import Flask, request
 from random import randint
-from flask import Flask, request, jsonify
 import mariadb
-import datetime
-import redis 
-
-from flask_jwt_extended import create_access_token
-from flask_jwt_extended import get_jwt
-from flask_jwt_extended import jwt_required
-from flask_jwt_extended import JWTManager
-
-import redis
-r = redis.Redis(host='localhost', port=6379, db=0, protocol=3)
+#https://mariadb.com/docs/server/connect/programming-languages/python/transactions/
 
 app = Flask(__name__)
 
-app.config["JWT_SECRET_KEY"] = "nciel"  # Change this!
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 900 #15mins
-app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedela(days=30) #30 pour test
+conn_params= {
+    "user" : "monapi",
+    "password" : "1234",
+    "host" : "10.40.1.31",
+    "database" : "dumpcantine"
+}
 
-jwt = JWTManager(app)
-
-# Connect to MariaDB Platform
-conn = mariadb.connect(
-    user="monapi",
-    password="1234",
-    host="localhost",
-    port=3306,
-    database="cantine"
-)
-
-@app.route("/login", methods=["POST"])
 def login():
-    #récupération des paramètres
-    useremail = request.json.get("email", None)
+    # Récupération des paramètres
+    username = request.json.get("email", None)
     password = request.json.get("password", None)
-    # return jsonify(useremail, password)
-    with mariadb.connect(**conn_params) as ma_connexion :
-        with ma_connexion.cursor() as cursor :
-            params= (useremail, password)
-            requete = """SELECT
-                            Personne.id_personne,
-                            Personne.id_role
-                         FROM
-                            Personne
-                         WHERE
-                            Personne.email = ? 
-                            AND
-                            Personne.pwd = ?;"""
-            try :
-                cursor.execute(requete, params)
-                if cursor.rowcount == 1 :
-                    #récup depuis le résultat de la requête des infos sur l'utilisateur
-                    ligne = cursor.fetchone()
-                    id_personne = str(ligne[0])
-                    id_role = str(ligne[1])
-                    data_user = {"id_role": id_role}
-                    access_token = create_access_token(identity=id_personne, additional_claims=data_user, fresh = True)
-                    refresh_token = create_refresh_token(identify=id_personne, additional_claims=data_user)
-                    #access_token = create_access_token(identity=id_personne)
-                    return jsonify(access_token=access_token, refresh_token=refresh_token)
-                else :
-                    return jsonify({"msg": "Erreur d'authentification"}), 401    
-            except :    
-                return jsonify({"msg": "Erreur d'authentification"}), 401
+    if username != "test" or password != "test":
     
+    try :
+        cursor.execute(requete, params)
+        if cursor.execute.rowcount == 1 :
+            #recup depuis le résultat de la requête des infos sur l'utilisateur
+            ligne = cursor.fetchone()
+            id_personne = ligne[0]
+    except:
+        return jsonify({"msg": "Bad username or password"}), 401
+        
+
 
 @app.route("/test",methods=['POST'])
 def test():
@@ -215,25 +179,8 @@ def lecteur():
             resultats = cursor.fetchall()
             id_affaction_carte = resultats[0][0]
             id_personne = resultats[0][1]            
-            return {"rep" : {"cas":"achat ou retour carte","id_affectation_carte" : id_affaction_carte, "id_personne" : id_personne}}   
-
-@app.route("/testjwt", methods=["GET"])
-@jwt_required(fresh = True)
-def protected():
-    current_user = get_jwt_identity()
-    data_jwt = get_jwt() 
-    return jsonify(current_user, data_jwt["id_role"] ), 200
-    #return jsonify(current_user), 200
-    #return "hello"
-    
-@app.route("/testrefresh", methods=["GET"])
-@jwt_required(refresh=True) # necéssite un refesh token non expiré
-def refresh():
-    current_user = get_jwt_identity()
-    data_jwt = {"id_role" : get_jwt(){"id_role"}}
-    refreshed_access_token = create_access_token (identify=current_user, additional_claims=data_jwt, fresh=False)
-    return (current_user, "id_role" : data_jwt["id_role"], access_token = refreshed_access_token ), 200  
-    
+            return {"rep" : {"cas":"achat ou retour carte","id_affectation_carte" : id_affaction_carte, "id_personne" : id_personne}}         
+        
 @app.route("/")
 def hello():
     with mariadb.connect(**conn_params) as ma_connexion :
@@ -244,8 +191,3 @@ def hello():
             for data_site in resultats :
                 noms_sites.append(data_site[1])
         return {"rep" : str(noms_sites)}
-
-def check_if_token_revoked(jwt_header_jwt_payload)
-# Todo : déconnexion : forcer à éffacer tous les jetons
-# Todo : mode partiellement protéger avec fresh = False, et plus sécurisé avec un fresh = True
-# Todo : blacklist
