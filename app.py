@@ -3,17 +3,26 @@ from flask import Flask, request, jsonify
 import mariadb
 import datetime
 import redis 
+from .db.database import get_session, engine, Base
 
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
 
-import redis
-r = redis.Redis(host='localhost', port=6379, db=0, protocol=3)
+from flask_sqlalchemy import SQLAlchemy 
+from sqlalchemy import create_engine
 
-app = Flask(__name__)
+from sqlalchemy.orm import Declarativebase,DeclarativeBase, Mapped, mapped_column 
 
+from models.user import User   # Import 
+
+# r = redis.Redis(host='localhost', port=6379, db=0, protocol=3)
+
+
+app = Flask(__name__) 
+
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///example.sqlite"  # Pourquoi '///' ? 
 app.config["JWT_SECRET_KEY"] = "nciel"  # Change this!
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 900 #15mins
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedela(days=30) #30 pour test
@@ -28,6 +37,69 @@ conn = mariadb.connect(
     port=3306,
     database="cantine"
 )
+
+Base = DeclarativeBase()
+
+class Base(DeclarativeBase): 
+  pass 
+
+ 
+# class User(db.Model): 
+
+#     id: Mapped[int] = mapped_column(db.Integer, primary_key=True) 
+
+#     username: Mapped[str] = mapped_column(db.String, unique=True, nullable=False) 
+
+ 
+
+def __repr__(self): 
+
+    return f"User : id = {self.id}, username : {self.username}" 
+
+ 
+
+with app.app_context(): 
+
+    db.create_all() #Création des tables, est-ce que ca écrase les datas ddéjà existantes ? 
+
+engine = create_engine(DATABASE_URL, echo= True)
+Sessionlocal = sessionmaker
+
+@app.route("/newuser",methods=['POST']) 
+
+@jwt_required() 
+
+def create_user(): 
+
+    pseudo_user = request.form.get('pseudo') 
+
+    db.session.add(User(username = pseudo_user)) 
+
+    db.session.commit() 
+
+    return {"rep" : f"User {pseudo_user} ajouté avec succès"}     
+ 
+def get_session()
+    """Créer une session pour les opérations sur la base."""
+    session = SessionLocal()
+    try:
+        yield session # Renvoie la session à chaque appel. Evite de la créer plusieurs fois avec le même contenu mais la créer plusieurs  fois si il le contexte est différent.
+    finally:
+        session.close()
+
+
+@app.route("/getuser",methods=['GET']) 
+
+@jwt_required() 
+
+def get_users(): 
+
+    statement = select(User).filter_by(username = "toto"
+    users = get_session().scalars().all
+
+    response = "" 
+    for user in users : 
+        reponse = reponse + "\n" + str(user) 
 
 @app.route("/login", methods=["POST"])
 def login():
