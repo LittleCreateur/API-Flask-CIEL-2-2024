@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify
 import mariadb
 import datetime
 import redis 
-from .db.database import get_session, engine, Base  #metadata
+from .db.database import engine, Base  #metadata
 
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt
@@ -15,7 +15,8 @@ from sqlalchemy import create_engine
 
 from sqlalchemy.orm import Declarativebase,DeclarativeBase, Mapped, mapped_column 
 
-from models import User   # Import 
+from models import User   # Import
+from ressources import user_bp
 
 # r = redis.Redis(host='localhost', port=6379, db=0, protocol=3)
 
@@ -41,6 +42,8 @@ conn = mariadb.connect(
 # Création des tables si inexistantes. Pas de modification si existantes.
 Base.metadata.create_all(bind=engine)
 
+# enregistrements des blueprints
+app.register_blueprint(user_bp)
 # class Base(DeclarativeBase): 
 #   pass 
 
@@ -51,26 +54,26 @@ Base.metadata.create_all(bind=engine)
 
 #     username: Mapped[str] = mapped_column(db.String, unique=True, nullable=False) 
 
-@app.route("/newuser",methods=['POST']) 
-@jwt_required() 
-def create_user(): 
-    pseudo_user = request.json.get('pseudo') 
-    session = next(get_session())
-    new_user = User(username = pseudo_user)
-    session.add(new_user)
-    session.commit()
-    session.refresh(new_user)
-    return {"rep" : f"User {str{pseudo_user}} ajouté avec succès"}     
+# @app.route("/newuser",methods=['POST']) 
+# @jwt_required() 
+# def create_user(): 
+#     pseudo_user = request.json.get('pseudo') 
+#     session = next(get_session())
+#     new_user = User(username = pseudo_user)
+#     session.add(new_user)
+#     session.commit()
+#     session.refresh(new_user)
+#     return {"rep" : f"User {str{pseudo_user}} ajouté avec succès"}     
 
-@app.route("/getuser",methods=['GET']) 
-@jwt_required() 
-def get_users(): 
-    session = next(get_session())
-    users = session.query(User).all()   # Sorte de cursor.execute
-    reponse = []
-    for user in users :
-        reponse.append(user.to_dict())
-    return jsonify(reponse)
+# @app.route("/getuser",methods=['GET']) 
+# @jwt_required() 
+# def get_users(): 
+#     session = next(get_session())
+#     users = session.query(User).all()   # Sorte de cursor.execute
+#     reponse = []
+#     for user in users :
+#         reponse.append(user.to_dict())
+#     return jsonify(reponse)
 
 @app.route("/login", methods=["POST"])
 def login():
