@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify
 import mariadb
 import datetime
 import redis 
-from .db.database import get_session, engine, Base
+from .db.database import get_session, engine, Base  #metadata
 
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt
@@ -15,7 +15,7 @@ from sqlalchemy import create_engine
 
 from sqlalchemy.orm import Declarativebase,DeclarativeBase, Mapped, mapped_column 
 
-from models.user import User   # Import 
+from models import User   # Import 
 
 # r = redis.Redis(host='localhost', port=6379, db=0, protocol=3)
 
@@ -38,10 +38,11 @@ conn = mariadb.connect(
     database="cantine"
 )
 
-Base = DeclarativeBase()
+# Création des tables si inexistantes. Pas de modification si existantes.
+Base.metadata.create_all(bind=engine)
 
-class Base(DeclarativeBase): 
-  pass 
+# class Base(DeclarativeBase): 
+#   pass 
 
  
 # class User(db.Model): 
@@ -50,56 +51,26 @@ class Base(DeclarativeBase):
 
 #     username: Mapped[str] = mapped_column(db.String, unique=True, nullable=False) 
 
- 
-
-def __repr__(self): 
-
-    return f"User : id = {self.id}, username : {self.username}" 
-
- 
-
-with app.app_context(): 
-
-    db.create_all() #Création des tables, est-ce que ca écrase les datas ddéjà existantes ? 
-
-engine = create_engine(DATABASE_URL, echo= True)
-Sessionlocal = sessionmaker
-
 @app.route("/newuser",methods=['POST']) 
-
 @jwt_required() 
-
 def create_user(): 
-
-    pseudo_user = request.form.get('pseudo') 
-
-    db.session.add(User(username = pseudo_user)) 
-
-    db.session.commit() 
-
-    return {"rep" : f"User {pseudo_user} ajouté avec succès"}     
- 
-def get_session()
-    """Créer une session pour les opérations sur la base."""
-    session = SessionLocal()
-    try:
-        yield session # Renvoie la session à chaque appel. Evite de la créer plusieurs fois avec le même contenu mais la créer plusieurs  fois si il le contexte est différent.
-    finally:
-        session.close()
-
+    pseudo_user = request.json.get('pseudo') 
+    session = next(get_session())
+    new_user = User(username = pseudo_user)
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+    return {"rep" : f"User {str{pseudo_user}} ajouté avec succès"}     
 
 @app.route("/getuser",methods=['GET']) 
-
 @jwt_required() 
-
 def get_users(): 
-
-    statement = select(User).filter_by(username = "toto"
-    users = get_session().scalars().all
-
-    response = "" 
-    for user in users : 
-        reponse = reponse + "\n" + str(user) 
+    session = next(get_session())
+    users = session.query(User).all()   # Sorte de cursor.execute
+    reponse = []
+    for user in users :
+        reponse.append(user.to_dict())
+    return jsonify(reponse)
 
 @app.route("/login", methods=["POST"])
 def login():
